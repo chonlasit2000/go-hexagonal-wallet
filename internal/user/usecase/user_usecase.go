@@ -9,18 +9,25 @@ import (
 )
 
 type userUsecase struct {
-	userRepo domain.UserRepository
+	userRepo  domain.UserRepository
+	jwtSecret string
 }
 
-func NewUserUsecase(repo domain.UserRepository) domain.UserUsecase {
-	return &userUsecase{userRepo: repo}
+func NewUserUsecase(repo domain.UserRepository, jwtSecret string) domain.UserUsecase {
+	return &userUsecase{
+		userRepo:  repo,
+		jwtSecret: jwtSecret,
+	}
 }
 
 func (u *userUsecase) Register(ctx context.Context, firstName string, lastName string, email string, password string) error {
 	// 1. ตรวจสอบว่ามี Email นี้หรือยัง (Optional)
-	existingUser, _ := u.userRepo.GetByEmail(ctx, email)
-	if existingUser != nil {
-		return errors.New("email already exists")
+	_, err := u.userRepo.GetByEmail(ctx, email)
+	if err == nil {
+		return domain.ErrConflict
+	}
+	if err != domain.ErrNotFound {
+		return err
 	}
 
 	// 2. Hash Password *** สำคัญมาก
@@ -29,7 +36,6 @@ func (u *userUsecase) Register(ctx context.Context, firstName string, lastName s
 		return err
 	}
 
-	// 3. ส่งให้ Repo บันทึก
 	newUser := &domain.User{
 		FirstName: firstName,
 		LastName:  lastName,
@@ -53,7 +59,7 @@ func (u *userUsecase) Login(ctx context.Context, email, password string) (domain
 	}
 
 	// 3. แจก Token
-	token, err := utils.GenerateToken(user.ID)
+	token, err := utils.GenerateToken(user.ID, u.jwtSecret)
 	if err != nil {
 		return domain.User{}, "", err
 	}

@@ -1,12 +1,13 @@
 package model
 
-// UserDBModel สืบทอดคุณสมบัติจาก BaseModel
+import "github.com/chonlasit2000/e-wallet-hexagonal/internal/basemodel"
+
 type UserDBModel struct {
-	BaseModel        // ฝัง struct (Embedding)
-	FirstName string `gorm:"type:varchar(100)"`
-	LastName  string `gorm:"type:varchar(100)"`
-	Email     string `gorm:"uniqueIndex;type:varchar(100)"`
-	Password  string `gorm:"type:varchar(255)"`
+	basemodel.Model        // ฝัง struct (Embedding)
+	FirstName       string `gorm:"type:varchar(100)"`
+	LastName        string `gorm:"type:varchar(100)"`
+	Email           string `gorm:"uniqueIndex;type:varchar(100)"`
+	Password        string `gorm:"type:varchar(255)"`
 }
 
 func (UserDBModel) TableName() string {

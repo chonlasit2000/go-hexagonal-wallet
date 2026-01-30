@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/chonlasit2000/e-wallet-hexagonal/domain"
+	"github.com/chonlasit2000/e-wallet-hexagonal/internal/basemodel"
 	"github.com/chonlasit2000/e-wallet-hexagonal/internal/user/repository/model"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -34,7 +35,7 @@ func toModel(d *domain.User) *model.UserDBModel {
 	uid, _ := uuid.Parse(d.ID) // แปลง string กลับเป็น uuid (ถ้ามีค่า)
 
 	return &model.UserDBModel{
-		BaseModel: model.BaseModel{
+		Model: basemodel.Model{
 			Uid: uid,
 		},
 		FirstName: d.FirstName,

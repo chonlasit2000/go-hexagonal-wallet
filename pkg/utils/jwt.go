@@ -6,15 +6,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// ของจริงควรดึงจาก Config แต่นี่เพื่อความง่าย Hardcode ไปก่อน
-var jwtSecret = []byte("my-super-secret-key")
-
-func GenerateToken(userID string) (string, error) {
+func GenerateToken(userID string, secret string) (string, error) {
 	claims := jwt.MapClaims{
-		"user_id": userID, // UUID เป็น string
+		"user_id": userID,
 		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+
+	// ใช้ secret ที่รับเข้ามา (แปลงเป็น []byte)
+	return token.SignedString([]byte(secret))
 }

@@ -31,7 +31,7 @@ func main() {
 
 	// 3. Init Layers (เดี๋ยวเราค่อยมาเติม Code ในไฟล์จริง)
 	userRepo := repository.NewPostgresRepository(db)
-	userUsecase := usecase.NewUserUsecase(userRepo)
+	userUsecase := usecase.NewUserUsecase(userRepo, cfg.Server.JWTSecret)
 
 	// 4. Start Server
 	app := fiber.New()

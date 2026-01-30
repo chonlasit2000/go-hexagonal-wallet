@@ -5,6 +5,8 @@ import (
 
 	"github.com/chonlasit2000/e-wallet-hexagonal/domain"
 	"github.com/chonlasit2000/e-wallet-hexagonal/internal/response"
+	"github.com/chonlasit2000/e-wallet-hexagonal/internal/user/delivery/http/dto"
+	"github.com/chonlasit2000/e-wallet-hexagonal/pkg/utils"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -21,7 +23,7 @@ func NewUserHandler(app *fiber.App, us domain.UserUsecase) {
 	api.Post("/login", handler.Login)
 }
 
-func handleError(c *fiber.Ctx, err error) error {
+func handleError(c *fiber.Ctx, err error, validationErrors []*utils.ErrorResponse) error {
 	switch {
 	// ถ้า error ตรงกับที่เรานิยามไว้ใน Domain
 	case errors.Is(err, domain.ErrBadRequest):
@@ -40,50 +42,44 @@ func handleError(c *fiber.Ctx, err error) error {
 }
 
 func (h *UserHandler) Register(c *fiber.Ctx) error {
-	// DTO แบบบ้านๆ (Anonymous Struct)
-	var req struct {
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-		Email     string `json:"email"`
-		Password  string `json:"password"`
+	var req dto.RegisterReq
+	if err := c.BodyParser(&req); err != nil {
+		return handleError(c, domain.ErrBadRequest, nil)
 	}
 
-	if err := c.BodyParser(&req); err != nil {
-		return handleError(c, domain.ErrBadRequest)
+	// Validate Input
+	if errors := utils.ValidateStruct(&req); errors != nil {
+		return response.ValidationError(c, errors)
 	}
 
 	if err := h.Usecase.Register(c.Context(), req.FirstName, req.LastName, req.Email, req.Password); err != nil {
-		return handleError(c, err)
+		return handleError(c, err, nil)
 	}
 
 	return response.Success(c, nil)
 }
 
 func (h *UserHandler) Login(c *fiber.Ctx) error {
-	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+	var req dto.LoginReq
+	if err := c.BodyParser(&req); err != nil {
+		return handleError(c, domain.ErrBadRequest, nil)
 	}
 
-	if err := c.BodyParser(&req); err != nil {
-		return handleError(c, domain.ErrBadRequest)
+	// Validate Input
+	if errors := utils.ValidateStruct(&req); errors != nil {
+		return response.ValidationError(c, errors)
 	}
 
 	user, token, err := h.Usecase.Login(c.Context(), req.Email, req.Password)
 	if err != nil {
-		return handleError(c, domain.ErrInvalidEmailOrPassword)
+		return handleError(c, domain.ErrInvalidEmailOrPassword, nil)
 	}
 
-	// สร้าง Response DTO
-	res := struct {
-		FullName string `json:"full_name"`
-		Email    string `json:"email"`
-		Token    string `json:"token"`
-	}{
+	resq := dto.LoginResp{
 		FullName: user.FirstName + " " + user.LastName,
 		Email:    user.Email,
 		Token:    token,
 	}
 
-	return response.Success(c, res)
+	return response.Success(c, resq)
 }

@@ -1,4 +1,4 @@
-package model
+package basemodel
 
 import (
 	"time"
@@ -7,8 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// BaseModel ตัวนี้อยู่ฝั่ง DB เท่านั้น (Domain ไม่ต้องรู้เรื่อง)
-type BaseModel struct {
+type Model struct {
 	Seq       int64          `gorm:"index"`
 	Uid       uuid.UUID      `gorm:"primaryKey;type:uuid"`
 	CreatedAt time.Time      `gorm:"autoCreateTime"`
@@ -17,7 +16,7 @@ type BaseModel struct {
 }
 
 // Hook สร้าง UUID และ Seq อัตโนมัติ
-func (m *BaseModel) BeforeCreate(tx *gorm.DB) (err error) {
+func (m *Model) BeforeCreate(tx *gorm.DB) (err error) {
 	if m.Uid == uuid.Nil {
 		m.Uid = uuid.New()
 	}
