@@ -23,7 +23,7 @@ func NewUserHandler(app *fiber.App, us domain.UserUsecase) {
 	api.Post("/login", handler.Login)
 }
 
-func handleError(c *fiber.Ctx, err error, validationErrors []*utils.ErrorResponse) error {
+func handleError(c *fiber.Ctx, err error) error {
 	switch {
 	// ถ้า error ตรงกับที่เรานิยามไว้ใน Domain
 	case errors.Is(err, domain.ErrBadRequest):
@@ -44,7 +44,7 @@ func handleError(c *fiber.Ctx, err error, validationErrors []*utils.ErrorRespons
 func (h *UserHandler) Register(c *fiber.Ctx) error {
 	var req dto.RegisterReq
 	if err := c.BodyParser(&req); err != nil {
-		return handleError(c, domain.ErrBadRequest, nil)
+		return handleError(c, domain.ErrBadRequest)
 	}
 
 	// Validate Input
@@ -53,7 +53,7 @@ func (h *UserHandler) Register(c *fiber.Ctx) error {
 	}
 
 	if err := h.Usecase.Register(c.Context(), req.FirstName, req.LastName, req.Email, req.Password); err != nil {
-		return handleError(c, err, nil)
+		return handleError(c, err)
 	}
 
 	return response.Success(c, nil)
@@ -62,7 +62,7 @@ func (h *UserHandler) Register(c *fiber.Ctx) error {
 func (h *UserHandler) Login(c *fiber.Ctx) error {
 	var req dto.LoginReq
 	if err := c.BodyParser(&req); err != nil {
-		return handleError(c, domain.ErrBadRequest, nil)
+		return handleError(c, domain.ErrBadRequest)
 	}
 
 	// Validate Input
@@ -72,7 +72,7 @@ func (h *UserHandler) Login(c *fiber.Ctx) error {
 
 	user, token, err := h.Usecase.Login(c.Context(), req.Email, req.Password)
 	if err != nil {
-		return handleError(c, domain.ErrInvalidEmailOrPassword, nil)
+		return handleError(c, domain.ErrInvalidEmailOrPassword)
 	}
 
 	resq := dto.LoginResp{

@@ -6,6 +6,7 @@ import (
 	"github.com/chonlasit2000/e-wallet-hexagonal/domain"
 	"github.com/chonlasit2000/e-wallet-hexagonal/internal/basemodel"
 	"github.com/chonlasit2000/e-wallet-hexagonal/internal/user/repository/model"
+	"github.com/chonlasit2000/e-wallet-hexagonal/pkg/database"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -46,22 +47,20 @@ func toModel(d *domain.User) *model.UserDBModel {
 }
 
 func (r *postgresRepository) Store(ctx context.Context, u *domain.User) error {
-	// 1. แปลง Domain เป็น Model เพื่อเตรียมบันทึก
 	dbUser := toModel(u)
-
-	// 2. บันทึกลง Postgres
-	if err := r.db.WithContext(ctx).Create(dbUser).Error; err != nil {
+	db := database.GetDBFromContext(ctx, r.db)
+	if err := db.WithContext(ctx).Create(dbUser).Error; err != nil {
 		return err
 	}
-
-	// 3. (Optional) อัปเดต ID กลับไปให้ Domain (เพราะ Postgres เพิ่ง gen ID มา)
 	u.ID = dbUser.Uid.String()
+
 	return nil
 }
 
 func (r *postgresRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	var dbUser model.UserDBModel
-	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&dbUser).Error; err != nil {
+	db := database.GetDBFromContext(ctx, r.db)
+	if err := db.WithContext(ctx).Where("email = ?", email).First(&dbUser).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, domain.ErrNotFound
 		}

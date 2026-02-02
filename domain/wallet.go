@@ -19,4 +19,6 @@ type WalletRepository interface {
 type WalletUsecase interface {
 	GetBalance(ctx context.Context, userID string) (*Wallet, error)
 	TopUp(ctx context.Context, userID string, amount float64) error
+	Transfer(ctx context.Context, senderID string, receiverID string, amount float64) error // โอนเงินระหว่างกระเป๋า
+	GetTransactions(ctx context.Context, userID string) ([]Transaction, error)
 }

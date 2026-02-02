@@ -9,14 +9,18 @@ import (
 )
 
 type userUsecase struct {
-	userRepo  domain.UserRepository
-	jwtSecret string
+	userRepo   domain.UserRepository
+	walletRepo domain.WalletRepository   // [เพิ่ม] ต้องใช้ WalletRepo
+	txManager  domain.TransactionManager // [เพิ่ม] ตัวคุม Transaction
+	jwtSecret  string
 }
 
-func NewUserUsecase(repo domain.UserRepository, jwtSecret string) domain.UserUsecase {
+func NewUserUsecase(repo domain.UserRepository, walletRepo domain.WalletRepository, txManager domain.TransactionManager, jwtSecret string) domain.UserUsecase {
 	return &userUsecase{
-		userRepo:  repo,
-		jwtSecret: jwtSecret,
+		userRepo:   repo,
+		walletRepo: walletRepo,
+		txManager:  txManager,
+		jwtSecret:  jwtSecret,
 	}
 }
 
@@ -43,7 +47,21 @@ func (u *userUsecase) Register(ctx context.Context, firstName string, lastName s
 		Password:  hashedPwd,
 	}
 
-	return u.userRepo.Store(ctx, newUser)
+	// *** เริ่ม Transaction ***
+	// โค้ดใน fn จะทำงานใน Transaction เดียวกัน
+	return u.txManager.Do(ctx, func(txCtx context.Context) error {
+		// 1. สร้าง User (ส่ง txCtx เข้าไป)
+		if err := u.userRepo.Store(txCtx, newUser); err != nil {
+			return err // ถ้า Error มันจะ Rollback ให้เอง
+		}
+
+		// 2. สร้าง Wallet ให้ User คนนี้ทันที (ส่ง txCtx เข้าไป)
+		if err := u.walletRepo.Create(txCtx, newUser.ID); err != nil {
+			return err // ถ้า Error -> Rollback ทั้ง Wallet และ User
+		}
+
+		return nil // ถ้า return nil -> Commit
+	})
 }
 
 func (u *userUsecase) Login(ctx context.Context, email, password string) (domain.User, string, error) {

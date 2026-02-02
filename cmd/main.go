@@ -5,10 +5,14 @@ import (
 	"log"
 
 	"github.com/chonlasit2000/e-wallet-hexagonal/config"
-	"github.com/chonlasit2000/e-wallet-hexagonal/internal/user/delivery/http"
-	"github.com/chonlasit2000/e-wallet-hexagonal/internal/user/repository"
-	"github.com/chonlasit2000/e-wallet-hexagonal/internal/user/repository/model"
-	"github.com/chonlasit2000/e-wallet-hexagonal/internal/user/usecase"
+	transactionRepo "github.com/chonlasit2000/e-wallet-hexagonal/internal/transaction/repository"
+	modeltransaction "github.com/chonlasit2000/e-wallet-hexagonal/internal/transaction/repository/model"
+	userHttp "github.com/chonlasit2000/e-wallet-hexagonal/internal/user/delivery/http"
+	userRepo "github.com/chonlasit2000/e-wallet-hexagonal/internal/user/repository"
+	userUsecase "github.com/chonlasit2000/e-wallet-hexagonal/internal/user/usecase"
+	walletHttp "github.com/chonlasit2000/e-wallet-hexagonal/internal/wallet/delivery/http"
+	walletRepo "github.com/chonlasit2000/e-wallet-hexagonal/internal/wallet/repository"
+	walletUsecase "github.com/chonlasit2000/e-wallet-hexagonal/internal/wallet/usecase"
 	"github.com/chonlasit2000/e-wallet-hexagonal/pkg/database"
 	"github.com/gofiber/fiber/v2"
 )
@@ -26,17 +30,28 @@ func main() {
 	fmt.Println("✅ Database connected")
 
 	// Auto Migrate (สร้าง Table ให้อัตโนมัติ)
-	db.AutoMigrate(&model.UserDBModel{})
+	// db.AutoMigrate(&modeluser.UserDBModel{})
+	// db.AutoMigrate(&modelwallet.WalletDBModel{})
+	db.AutoMigrate(&modeltransaction.TransactionDBModel{})
 	fmt.Println("✅ Database migrated")
 
-	// 3. Init Layers (เดี๋ยวเราค่อยมาเติม Code ในไฟล์จริง)
-	userRepo := repository.NewPostgresRepository(db)
-	userUsecase := usecase.NewUserUsecase(userRepo, cfg.Server.JWTSecret)
+	// 3. Init Repositories
+	userRepo := userRepo.NewPostgresRepository(db)
+	walletRepo := walletRepo.NewPostgresRepository(db)
+	transactionRepo := transactionRepo.NewPostgresRepository(db)
+
+	// Init Transactor
+	txManager := database.NewGormTransactionManager(db)
+
+	// Init Usecases
+	userUsecase := userUsecase.NewUserUsecase(userRepo, walletRepo, txManager, cfg.Server.JWTSecret)
+	walletUsecase := walletUsecase.NewWalletUsecase(walletRepo, transactionRepo, txManager)
 
 	// 4. Start Server
 	app := fiber.New()
 
-	http.NewUserHandler(app, userUsecase)
+	userHttp.NewUserHandler(app, userUsecase)
+	walletHttp.NewWalletHandler(app, walletUsecase, cfg.Server.JWTSecret)
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("E-Wallet API is Running! 🚀")
