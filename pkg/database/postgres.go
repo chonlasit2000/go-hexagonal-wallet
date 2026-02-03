@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/chonlasit2000/e-wallet-hexagonal/config"
 	"gorm.io/driver/postgres"
@@ -29,6 +30,16 @@ func NewPostgresDatabase(cfg *config.Config) *gorm.DB {
 	if err != nil {
 		log.Fatalf("Cannot connect to database: %v", err)
 	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// จูนตามความเหมาะสมของ Server
+	sqlDB.SetMaxIdleConns(10)  // Connection ที่เปิดรอไว้
+	sqlDB.SetMaxOpenConns(100) // Connection สูงสุดที่รับได้
+	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	return db
 

@@ -8,6 +8,7 @@ import (
 	"github.com/chonlasit2000/e-wallet-hexagonal/pkg/database"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type postgresRepository struct {
@@ -51,6 +52,12 @@ func (r *postgresRepository) GetByUserID(ctx context.Context, userID string) (*d
 	userUUID, _ := uuid.Parse(userID)
 	var dbWallet model.WalletDBModel
 	db := database.GetDBFromContext(ctx, r.db)
+
+	// ถ้าอยู่ใน Transaction ให้ Lock แถวนี้ไว้ ห้ามใครแก้นอกจากเรา
+	if _, isTx := ctx.Value(database.TxKey{}).(*gorm.DB); isTx {
+		db = db.Clauses(clause.Locking{Strength: "UPDATE"})
+	}
+
 	if err := db.WithContext(ctx).Where("user_id = ?", userUUID).First(&dbWallet).Error; err != nil {
 		return nil, err
 	}

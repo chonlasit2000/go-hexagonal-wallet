@@ -64,19 +64,21 @@ func (u *walletUsecase) Transfer(ctx context.Context, senderID string, receiverI
 
 	// 2. เริ่ม Transaction (All or Nothing)
 	return u.txManager.Do(ctx, func(txCtx context.Context) error {
-		// 1. ดึง Wallet ทั้งคู่ (เพื่อเอา WalletID ที่เป็น UUID)
+		// 1. ดึง Wallet คนโอน
 		senderWallet, err := u.walletRepo.GetByUserID(txCtx, senderID)
 		if err != nil {
 			return err
 		}
 
+		// [ย้ายมาตรงนี้] 2. เช็คยอดเงินก่อน! (ถ้าไม่พอ return เลย ไม่ต้องไปหาคนรับ)
+		if senderWallet.Balance < amount {
+			return domain.ErrInsufficientBalance
+		}
+
+		// 3. ถ้าเงินพอ ค่อยไปดึง Wallet คนรับ
 		receiverWallet, err := u.walletRepo.GetByUserID(txCtx, receiverID)
 		if err != nil {
 			return err
-		} // จริงๆ ควรเช็คตั้งแต่ validation
-
-		if senderWallet.Balance < amount {
-			return domain.ErrInsufficientBalance
 		}
 
 		// 2. ปรับยอดเงิน
